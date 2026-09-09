@@ -149,6 +149,14 @@
   .modal pre.notes{max-height:160px;overflow:auto;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;white-space:pre-wrap;color:#334155}
 
   @media (max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}main{padding:0 16px 60px}header{padding:18px 20px}#banner-host{padding:0 16px}}
+
+  footer{border-top:1px solid var(--border);background:#fff}
+  .foot{max-width:1500px;margin:0 auto;padding:18px 32px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+  .foot a{color:var(--muted);text-decoration:none}
+  .foot a:hover{color:var(--primary)}
+  .foot .sep{opacity:.45}
+  .foot .spacer{flex:1}
+  @media (max-width:900px){.foot{padding:16px}}
 </style>
 </head>
 <body>
@@ -232,6 +240,19 @@
     </div>
   </div>
 </main>
+
+<footer>
+  <div class="foot">
+    <span>&copy; 2026 MICO360</span>
+    <span class="sep">|</span>
+    <a href="/help" target="_blank" rel="noopener">Help</a>
+    <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+    <a href="/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a>
+    <a href="https://github.com/mico360om/GMap-Scrapper" target="_blank" rel="noopener">GitHub</a>
+    <span class="spacer"></span>
+    <span>MICO360 GMap Scrapper</span>
+  </div>
+</footer>
 
 <!-- Settings / Auto-update modal -->
 <div class="modal-overlay" id="settings-modal" hidden>

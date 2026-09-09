@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, FileResponse
 from playwright.async_api import async_playwright, Browser, Page
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 
 warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 warnings.filterwarnings("ignore", category=Warning, module="httpx")
@@ -30,7 +30,10 @@ UA = (
     "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 )
 
-UPDATE_FILES = ("app.py", "index.html", "requirements.txt", "start.bat")
+UPDATE_FILES = (
+    "app.py", "index.html", "requirements.txt", "start.bat",
+    "privacy.html", "terms.html", "help.html",
+)
 
 state: dict = {"pw": None, "browser": None}
 
@@ -95,6 +98,21 @@ async def logo_white_png():
 @app.get("/favicon.ico")
 async def favicon():
     return FileResponse(ROOT / "logo.png", media_type="image/png")
+
+
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy():
+    return (ROOT / "privacy.html").read_text(encoding="utf-8")
+
+
+@app.get("/terms", response_class=HTMLResponse)
+async def terms():
+    return (ROOT / "terms.html").read_text(encoding="utf-8")
+
+
+@app.get("/help", response_class=HTMLResponse)
+async def help_page():
+    return (ROOT / "help.html").read_text(encoding="utf-8")
 
 
 @app.get("/health")

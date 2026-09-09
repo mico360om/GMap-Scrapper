@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Help — MICO360 GMap Scrapper</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f5f7fa;--card:#fff;--border:#e5e8ec;--text:#1f2937;--muted:#6b7280;--primary:#8a1a1c;--primary-dark:#6e1416;--ink:#1e1f1e}
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+  header{background:linear-gradient(135deg,#8a1a1c 0%,#5f1113 45%,#1e1f1e 100%);color:#fff;padding:20px 32px}
+  .brand{display:flex;align-items:center;gap:16px;max-width:880px;margin:0 auto}
+  .brand-logo{height:38px;width:auto;display:block}
+  .brand-divider{width:1px;align-self:stretch;background:rgba(255,255,255,.28);margin:2px 0}
+  .brand h1{margin:0;font-size:18px;font-weight:600;letter-spacing:-.01em}
+  .brand p{margin:2px 0 0;font-size:12.5px;opacity:.85}
+  main{max-width:880px;margin:28px auto 56px;padding:0 32px}
+  .backlink{display:inline-block;margin-bottom:16px;color:var(--primary);text-decoration:none;font-size:14px;font-weight:500}
+  .backlink:hover{text-decoration:underline}
+  .doc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:30px 36px;box-shadow:0 1px 3px rgba(15,23,42,.05)}
+  .doc h2{font-size:23px;margin:0 0 4px;letter-spacing:-.01em}
+  .updated{color:var(--muted);font-size:13px;margin:0 0 22px}
+  .doc h3{font-size:17px;margin:28px 0 8px;color:var(--ink)}
+  .doc p,.doc li{color:#374151}
+  .doc ul,.doc ol{padding-left:20px}
+  .doc li{margin:4px 0}
+  .doc a{color:var(--primary)}
+  .doc code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:#f1f5f9;border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:#334155}
+  .q{font-weight:600;color:var(--ink);margin:18px 0 2px}
+  .tip{background:#fdf6f6;border:1px solid #f0cfd0;border-radius:8px;padding:12px 16px;font-size:13.5px;color:var(--primary-dark);margin:18px 0}
+  footer{border-top:1px solid var(--border);background:#fff}
+  .foot{max-width:880px;margin:0 auto;padding:18px 32px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--muted)}
+  .foot a{color:var(--muted);text-decoration:none}
+  .foot a:hover{color:var(--primary)}
+  .foot .sep{opacity:.45}
+  .foot .spacer{flex:1}
+  @media (max-width:640px){main{padding:0 16px}.doc{padding:22px 20px}header{padding:16px 18px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img class="brand-logo" src="/logo-w.png" alt="MICO360">
+    <div class="brand-divider"></div>
+    <div class="brand-text">
+      <h1>GMap Scrapper</h1>
+      <p>Help &amp; User Guide</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <a class="backlink" href="/">&larr; Back to the app</a>
+  <div class="doc">
+    <h2>Help &amp; User Guide</h2>
+    <p class="updated">MICO360 GMap Scrapper</p>
+
+    <h3>Getting started</h3>
+    <ol>
+      <li>Double-click <code>start.bat</code>. The first run sets up a Python environment and
+      downloads a browser engine (about 150&nbsp;MB) — this takes a few minutes, once.</li>
+      <li>Your browser opens automatically at <code>http://127.0.0.1:8000</code>. If it doesn&rsquo;t,
+      open that address manually.</li>
+      <li>Leave the black command window open while you work — it&rsquo;s the running server. Press
+      <code>Ctrl&nbsp;+&nbsp;C</code> in it to stop.</li>
+    </ol>
+
+    <h3>Running a search</h3>
+    <ol>
+      <li>Type a query such as <code>dentists in Karachi</code> or <code>law firms in Dubai</code>.</li>
+      <li>Set <b>Max results</b> (how many listings to collect).</li>
+      <li>Optionally tick <b>Extract emails</b> to visit each business website and harvest published
+      email addresses. This is slower but adds contact emails.</li>
+      <li>Click <b>Start scraping</b>. Progress and a live activity log appear as results stream in.</li>
+      <li>Use <b>Stop</b> to end early; collected rows are kept.</li>
+    </ol>
+
+    <h3>Working with results</h3>
+    <ul>
+      <li><b>Filter</b> — type in the search box to narrow rows by name, address, email, etc.</li>
+      <li><b>Columns &#9662;</b> — show or hide any of the 20 data fields.</li>
+      <li>The stat cards summarise how many listings have emails, phones, and websites.</li>
+    </ul>
+
+    <h3>Exporting</h3>
+    <p>Click <b>&darr; XLSX</b> (Excel) or <b>&darr; CSV</b> to download the current results. Files are
+    saved to your computer&rsquo;s Downloads folder. <b>Clear</b> empties the table.</p>
+
+    <h3>Settings &amp; auto-update</h3>
+    <p>The gear icon (&#9881;) opens Settings. Click <b>Check for updates</b> to see whether a newer
+    version is available on GitHub, then <b>Update now</b> to download it. After updating, stop and
+    re-run <code>start.bat</code> to load the new version. A backup of your current files is made
+    automatically.</p>
+
+    <h3>Troubleshooting</h3>
+
+    <p class="q">The page says &ldquo;offline&rdquo; / &ldquo;Can&rsquo;t reach the local server&rdquo;</p>
+    <p>Make sure the <code>start.bat</code> command window is still running, and that you opened
+    <code>http://127.0.0.1:8000</code> (not the HTML file directly).</p>
+
+    <p class="q">&ldquo;Results feed not found — Google may be showing a CAPTCHA&rdquo;</p>
+    <p>Google occasionally challenges automated traffic. Stop the server, set the environment variable
+    <code>HEADLESS=0</code>, re-run <code>start.bat</code>, and solve the CAPTCHA in the browser window
+    that appears. Slower, smaller batches also reduce challenges.</p>
+
+    <p class="q">&ldquo;Port 8000 in use&rdquo; when starting</p>
+    <p>An old copy is still running. Close any previous scraper/command windows, or find and stop the
+    process: <code>netstat -ano | findstr :8000</code> then <code>taskkill /PID &lt;pid&gt; /F</code>.</p>
+
+    <p class="q">The banner warns the browser engine failed to start</p>
+    <p>Stop <code>start.bat</code> and re-run it. If it persists, delete the <code>.venv</code> folder
+    and run <code>start.bat</code> again to reinstall.</p>
+
+    <p class="q">No emails were found for some businesses</p>
+    <p>Not every business publishes an email on its website, and some sites block automated access.
+    Missing emails are normal.</p>
+
+    <div class="tip">
+      <b>Tip:</b> email extraction visits each business&rsquo;s homepage and contact pages, so runs with
+      it enabled take noticeably longer. Turn it off for a quick listing-only pass.
+    </div>
+
+    <h3>FAQ</h3>
+    <p class="q">Is this affiliated with Google?</p>
+    <p>No. It is an independent tool and is not affiliated with or endorsed by Google. See the
+    <a href="/terms">Terms &amp; Conditions</a>.</p>
+
+    <p class="q">Is scraping Google Maps allowed?</p>
+    <p>Automated access may conflict with Google&rsquo;s Terms of Service, and you are responsible for
+    your own compliance. Please read the <a href="/terms">Terms &amp; Conditions</a> and
+    <a href="/privacy">Privacy Policy</a>.</p>
+
+    <p class="q">Where is my data stored?</p>
+    <p>Only on your computer — in the browser while running, and in the files you export. Nothing is
+    sent to us.</p>
+  </div>
+</main>
+
+<footer>
+  <div class="foot">
+    <span>&copy; 2026 MICO360</span>
+    <span class="sep">|</span>
+    <a href="/help">Help</a>
+    <a href="/privacy">Privacy Policy</a>
+    <a href="/terms">Terms &amp; Conditions</a>
+    <a href="https://github.com/mico360om/GMap-Scrapper" target="_blank" rel="noopener">GitHub</a>
+    <span class="spacer"></span>
+    <a href="/">Back to app &rarr;</a>
+  </div>
+</footer>
+</body>
+</html>
