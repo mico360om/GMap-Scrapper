@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>MICO360 GMap Scrapper</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  // Catch ANY script error and show it visibly. Must be the very first script.
+  window.addEventListener('error', function(e){
+    try {
+      var d = document.createElement('div');
+      d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#fee2e2;color:#7f1d1d;padding:10px 16px;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;border-bottom:2px solid #dc2626';
+      d.textContent = 'JS Error: ' + (e.message||'?') + '  @  ' + (e.filename||'inline') + ':' + (e.lineno||'?') + ':' + (e.colno||'?');
+      (document.body||document.documentElement).appendChild(d);
+    } catch(_){}
+  });
+  window.addEventListener('unhandledrejection', function(e){
+    try {
+      var d = document.createElement('div');
+      d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#fef3c7;color:#78350f;padding:10px 16px;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;border-bottom:2px solid #d97706';
+      d.textContent = 'Promise rejected: ' + (e.reason && (e.reason.message||e.reason) || '?');
+      (document.body||document.documentElement).appendChild(d);
+    } catch(_){}
+  });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#f5f7fa;--card:#ffffff;--border:#e5e8ec;--text:#1f2937;--muted:#6b7280;
+    --primary:#8a1a1c;--primary-dark:#6e1416;--ink:#1e1f1e;--success:#0f9d58;--warn:#f29900;
+    --danger:#d93025;--highlight:#ecfdf5;--tint:#f9ecec;
+    --shadow:0 1px 2px rgba(15,23,42,.04),0 1px 3px rgba(15,23,42,.04);
+    --shadow-lg:0 8px 24px rgba(15,23,42,.08);
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:'Inter',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+  header{background:linear-gradient(135deg,#8a1a1c 0%,#5f1113 45%,#1e1f1e 100%);color:#fff;padding:20px 32px;box-shadow:var(--shadow)}
+  .brand{display:flex;align-items:center;gap:16px;max-width:1500px;margin:0 auto}
+  .brand-logo{height:40px;width:auto;display:block}
+  .brand-divider{width:1px;align-self:stretch;background:rgba(255,255,255,.28);margin:2px 0}
+  .brand-text{flex:1}
+  .brand h1{margin:0;font-size:19px;font-weight:600;letter-spacing:-.01em}
+  .brand p{margin:2px 0 0;font-size:12.5px;opacity:.85}
+  .header-actions{display:flex;align-items:center;gap:8px}
+  .version-pill{font-size:11.5px;background:rgba(255,255,255,.18);padding:4px 10px;border-radius:99px;font-weight:500}
+  .icon-btn{width:34px;height:34px;background:rgba(255,255,255,.15);border:0;color:#fff;border-radius:50%;cursor:pointer;font-size:16px;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .icon-btn:hover{background:rgba(255,255,255,.28)}
+
+  #banner-host{max-width:1500px;margin:0 auto;padding:0 32px}
+  .banner{margin-top:14px;padding:12px 16px;border-radius:10px;display:flex;align-items:center;gap:12px;font-size:13.5px}
+  .banner.update{background:var(--tint);color:var(--primary-dark);border:1px solid #f0cfd0}
+  .banner.offline{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+  .banner button{padding:6px 12px;font-size:12.5px}
+  .banner .spacer{flex:1}
+
+  main{max-width:1500px;margin:18px auto;padding:0 32px 60px}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:18px;box-shadow:var(--shadow)}
+
+  form{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+  label.field{display:flex;flex-direction:column;font-size:11.5px;color:var(--muted);gap:6px;font-weight:500;text-transform:uppercase;letter-spacing:.04em}
+  input[type=text],input[type=search],input[type=number]{padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;background:#fff;color:var(--text);transition:border-color .15s,box-shadow .15s}
+  input[type=text]{min-width:280px}
+  input[type=number]{width:120px}
+  input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(138,26,28,.18)}
+
+  button{padding:10px 18px;border:0;border-radius:8px;background:var(--primary);color:#fff;font:inherit;font-weight:500;cursor:pointer;transition:opacity .15s,transform .05s;display:inline-flex;align-items:center;gap:6px}
+  button:hover:not(:disabled){opacity:.9}
+  button:active:not(:disabled){transform:translateY(1px)}
+  button:disabled{background:#cbd5e1;color:#fff;cursor:not-allowed}
+  button.secondary{background:var(--success)}
+  button.tertiary{background:#475569}
+  button.ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+  button.ghost:hover:not(:disabled){background:#f8fafc;color:var(--text)}
+  button.danger{background:var(--danger)}
+
+  .options{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)}
+  .check{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text);cursor:pointer;user-select:none}
+  .check input{width:16px;height:16px;accent-color:var(--primary)}
+
+  .progress-section{margin-top:16px}
+  .progress-bar{height:6px;background:#e5e8ec;border-radius:99px;overflow:hidden;position:relative}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),#b83234);width:0;transition:width .35s ease;border-radius:99px}
+  .progress-fill.indeterminate{width:33%;animation:slide 1.4s infinite ease-in-out;background:linear-gradient(90deg,transparent,var(--primary),transparent)}
+  @keyframes slide{0%{margin-left:-33%}100%{margin-left:100%}}
+  .progress-text{margin-top:8px;font-size:12.5px;color:var(--muted)}
+
+  details.log-wrap{margin-top:14px}
+  details.log-wrap summary{cursor:pointer;font-size:12.5px;color:var(--muted);user-select:none;padding:4px 0;outline:none}
+  details.log-wrap summary:hover{color:var(--text)}
+  .log{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;max-height:200px;overflow-y:auto;background:#0f172a;color:#cbd5e1;border-radius:8px;padding:12px;margin-top:8px;white-space:pre-wrap;line-height:1.55}
+  .log:empty::before{content:"No activity yet.";color:#64748b}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;box-shadow:var(--shadow)}
+  .stat-num{font-size:24px;font-weight:700;color:var(--text);letter-spacing:-.02em;line-height:1}
+  .stat-num.green{color:var(--success)}
+  .stat-num.blue{color:var(--primary)}
+  .stat-num.orange{color:var(--warn)}
+  .stat-label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:500;margin-top:6px}
+
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  .toolbar input[type=search]{flex:1;min-width:200px;max-width:320px}
+  .spacer{flex:1}
+  .badge{display:inline-flex;align-items:center;padding:5px 11px;border-radius:99px;background:var(--tint);color:var(--primary);font-size:12px;font-weight:600}
+
+  .menu-wrap{position:relative}
+  .dropdown{position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow-lg);padding:6px;min-width:220px;max-height:380px;overflow-y:auto;z-index:10}
+  .dropdown[hidden]{display:none}
+  .dropdown label{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--text)}
+  .dropdown label:hover{background:#f1f5f9}
+  .dropdown input{accent-color:var(--primary)}
+  .dropdown-actions{display:flex;gap:4px;padding:6px 6px 8px;border-bottom:1px solid var(--border);margin-bottom:4px}
+  .dropdown-actions button{flex:1;padding:5px 8px;font-size:11.5px;background:transparent;color:var(--primary);border:1px solid var(--border)}
+  .dropdown-actions button:hover{background:var(--tint)}
+
+  .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .scroll{overflow:auto;max-height:65vh;border:1px solid var(--border);border-radius:10px;background:#fff}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;max-width:300px;word-break:break-word}
+  th{background:#f8fafc;position:sticky;top:0;z-index:1;font-weight:600;color:#334155;font-size:11px;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+  tr:hover td{background:#fafbfc}
+  tr.has-email{background:var(--highlight)}
+  tr.has-email:hover td{background:#dcfce7}
+  td a{color:var(--primary);text-decoration:none}
+  td a:hover{text-decoration:underline}
+  td.col-name{font-weight:500;color:var(--text)}
+  td.col-rating{white-space:nowrap}
+  td.col-emails{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:#065f46}
+  .empty{text-align:center;padding:60px 20px;color:var(--muted)}
+  .empty-icon{margin-bottom:8px;opacity:.4}
+
+  .col-hidden{display:none}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .modal-overlay[hidden]{display:none}
+  .modal{background:#fff;border-radius:14px;box-shadow:var(--shadow-lg);max-width:480px;width:100%;padding:24px}
+  .modal h2{margin:0 0 6px;font-size:17px}
+  .modal p.hint{margin:0 0 16px;color:var(--muted);font-size:13px}
+  .modal .field{margin-bottom:14px;display:flex;flex-direction:column;gap:6px;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:500}
+  .modal input{padding:10px 12px;border:1px solid var(--border);border-radius:8px;font:inherit;text-transform:none;letter-spacing:0;color:var(--text)}
+  .modal-actions{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap}
+  .modal pre.notes{max-height:160px;overflow:auto;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;white-space:pre-wrap;color:#334155}
+
+  @media (max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}main{padding:0 16px 60px}header{padding:18px 20px}#banner-host{padding:0 16px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <img class="brand-logo" src="/logo-w.png" alt="MICO360">
+    <div class="brand-divider"></div>
+    <div class="brand-text">
+      <h1>GMap Scrapper</h1>
+      <p>Local • Bulk listings → XLSX / CSV • Email harvesting</p>
+    </div>
+    <div class="header-actions">
+      <span class="version-pill" id="version-pill">v…</span>
+      <button class="icon-btn" id="settings-btn" title="Settings / Auto-update">⚙</button>
+    </div>
+  </div>
+</header>
+
+<div id="banner-host"></div>
+
+<main>
+  <div class="panel">
+    <form id="form">
+      <label class="field">Search query
+        <input id="query" type="text" required placeholder='e.g., "dentists in Karachi"' value="restaurants in Lahore">
+      </label>
+      <label class="field">Max results
+        <input id="maxr" type="number" value="60" min="1" max="500">
+      </label>
+      <button id="go" type="submit">▶ Start scraping</button>
+      <button id="stop" type="button" class="danger" disabled>■ Stop</button>
+      <button id="diag" type="button" class="ghost" title="Test server connection">Test connection</button>
+    </form>
+    <div class="options">
+      <label class="check">
+        <input type="checkbox" id="opt-emails" checked>
+        Extract emails from each business website (slower; visits homepage + /contact pages)
+      </label>
+    </div>
+    <div class="progress-section" id="progress-section" style="display:none">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+      <div class="progress-text" id="progress-text">Starting…</div>
+    </div>
+    <details class="log-wrap" open>
+      <summary>Activity log</summary>
+      <div class="log" id="log"></div>
+    </details>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num blue" id="stat-total">0</div><div class="stat-label">Listings</div></div>
+    <div class="stat"><div class="stat-num green" id="stat-emails">0</div><div class="stat-label">With email</div></div>
+    <div class="stat"><div class="stat-num" id="stat-phones">0</div><div class="stat-label">With phone</div></div>
+    <div class="stat"><div class="stat-num orange" id="stat-websites">0</div><div class="stat-label">With website</div></div>
+  </div>
+
+  <div class="panel">
+    <div class="toolbar">
+      <span class="badge"><span id="count">0</span>&nbsp;results</span>
+      <input type="search" id="filter" placeholder="🔍 Filter rows (name, address, email…)">
+      <div class="spacer"></div>
+      <div class="menu-wrap">
+        <button class="ghost" id="cols-btn">Columns ▾</button>
+        <div class="dropdown" id="cols-menu" hidden></div>
+      </div>
+      <button class="secondary" id="dl-xlsx" disabled>↓ XLSX</button>
+      <button class="tertiary" id="dl-csv" disabled>↓ CSV</button>
+      <button class="ghost" id="clear" disabled>Clear</button>
+    </div>
+    <div class="scroll">
+      <table id="table">
+        <thead><tr id="thead-row"></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="empty">
+        <div class="empty-icon">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div>No results yet — start a scrape above.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Settings / Auto-update modal -->
+<div class="modal-overlay" id="settings-modal" hidden>
+  <div class="modal">
+    <h2>Settings & auto-update</h2>
+    <p class="hint">Point this tool at a GitHub repo to receive updates. Anyone (you) maintaining the repo can push changes; clicking <b>Update now</b> downloads the latest <code>app.py</code>, <code>index.html</code>, <code>requirements.txt</code>, and <code>start.bat</code>.</p>
+    <label class="field">GitHub repository
+      <input id="cfg-repo" type="text" placeholder="username/gmaps-scrapper" autocomplete="off">
+    </label>
+    <label class="field">Branch
+      <input id="cfg-branch" type="text" placeholder="main" value="main" autocomplete="off">
+    </label>
+    <div id="cfg-status" style="font-size:12.5px;color:var(--muted);margin-top:4px"></div>
+    <pre class="notes" id="cfg-notes" hidden></pre>
+    <div class="modal-actions">
+      <button id="cfg-save" class="secondary">Save</button>
+      <button id="cfg-check">Check for updates</button>
+      <button id="cfg-apply" class="tertiary" disabled>Update now</button>
+      <div class="spacer"></div>
+      <button id="cfg-close" class="ghost">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const FIELDS = [
+  "name","category","rating","reviews","price","address","phone","emails","website",
+  "hours","status","plus_code","latitude","longitude","place_id","place_url",
+  "description","services","menu_url","image_url"
+];
+const DEFAULT_VISIBLE = new Set([
+  "name","category","rating","reviews","address","phone","emails","website","hours","status","price"
+]);
+
+const $ = id => document.getElementById(id);
+const results = [];
+let evt = null;
+let visibleCols = new Set(DEFAULT_VISIBLE);
+let totalExpected = 0;
+let latestUpdateInfo = null;
+
+function escHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function log(msg){
+  const el = $('log');
+  const time = new Date().toLocaleTimeString();
+  el.textContent += `[${time}] ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+  console.log('[gmaps]', msg);
+}
+
+function showBanner(kind, html, opts){
+  opts = opts || {};
+  const host = $('banner-host');
+  // Replace existing banner of same kind
+  const old = host.querySelector('.banner.'+kind);
+  if (old) old.remove();
+  const b = document.createElement('div');
+  b.className = 'banner ' + kind;
+  b.innerHTML = html;
+  host.appendChild(b);
+  if (opts.dismissBtn){
+    const dis = b.querySelector('[data-act="dismiss"]');
+    if (dis) dis.addEventListener('click', () => b.remove());
+  }
+  return b;
+}
+
+function colClass(f){ return 'col-'+f + (visibleCols.has(f) ? '' : ' col-hidden'); }
+
+function renderHeader(){
+  $('thead-row').innerHTML = FIELDS.map(f => `<th class="${colClass(f)}">${f.replace(/_/g,' ')}</th>`).join('');
+}
+
+function renderColMenu(){
+  const actions = `
+    <div class="dropdown-actions">
+      <button type="button" data-action="all">Select all</button>
+      <button type="button" data-action="none">Clear</button>
+      <button type="button" data-action="reset">Defaults</button>
+    </div>`;
+  const items = FIELDS.map(f => `
+    <label>
+      <input type="checkbox" data-col="${f}" ${visibleCols.has(f) ? 'checked' : ''}>
+      ${f.replace(/_/g,' ')}
+    </label>`).join('');
+  $('cols-menu').innerHTML = actions + items;
+  $('cols-menu').querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const c = e.target.dataset.col;
+      if (e.target.checked) visibleCols.add(c); else visibleCols.delete(c);
+      updateColumnVisibility();
+    });
+  });
+  $('cols-menu').querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const a = e.target.dataset.action;
+      if (a === 'all') visibleCols = new Set(FIELDS);
+      else if (a === 'none') visibleCols = new Set();
+      else if (a === 'reset') visibleCols = new Set(DEFAULT_VISIBLE);
+      renderColMenu();
+      updateColumnVisibility();
+    });
+  });
+}
+
+function updateColumnVisibility(){
+  document.querySelectorAll('th, td').forEach(el => {
+    for (const f of FIELDS){
+      if (el.classList.contains('col-'+f)){
+        el.classList.toggle('col-hidden', !visibleCols.has(f));
+      }
+    }
+  });
+}
+
+function renderRow(item){
+  const tr = document.createElement('tr');
+  if (item.emails) tr.classList.add('has-email');
+  tr.innerHTML = FIELDS.map(f => {
+    const v = item[f] || '';
+    const cls = colClass(f);
+    if (!v) return `<td class="${cls}"></td>`;
+    if (f === 'name' && item.place_url)
+      return `<td class="${cls}"><a href="${escHtml(item.place_url)}" target="_blank" rel="noopener">${escHtml(v)}</a></td>`;
+    if (f === 'website' || f === 'menu_url')
+      return `<td class="${cls}"><a href="${escHtml(v)}" target="_blank" rel="noopener">${f==='menu_url'?'menu ↗':'site ↗'}</a></td>`;
+    if (f === 'place_url')
+      return `<td class="${cls}"><a href="${escHtml(v)}" target="_blank" rel="noopener">map ↗</a></td>`;
+    if (f === 'image_url')
+      return `<td class="${cls}"><a href="${escHtml(v)}" target="_blank" rel="noopener">image ↗</a></td>`;
+    if (f === 'rating' && v)
+      return `<td class="${cls}">★ ${escHtml(v)}${item.reviews?` <span style="color:#94a3b8">(${escHtml(item.reviews)})</span>`:''}</td>`;
+    if (f === 'emails'){
+      const parts = v.split(';').map(s => s.trim()).filter(Boolean);
+      const html = parts.map(e => `<a href="mailto:${escHtml(e)}">${escHtml(e)}</a>`).join('<br>');
+      return `<td class="${cls}">${html}</td>`;
+    }
+    if (f === 'phone'){
+      const num = String(v).replace(/[^\d+]/g,'');
+      return `<td class="${cls}"><a href="tel:${escHtml(num)}">${escHtml(v)}</a></td>`;
+    }
+    return `<td class="${cls}">${escHtml(v)}</td>`;
+  }).join('');
+  return tr;
+}
+
+function recomputeStats(){
+  $('stat-total').textContent = results.length;
+  $('stat-emails').textContent = results.filter(r => r.emails).length;
+  $('stat-phones').textContent = results.filter(r => r.phone).length;
+  $('stat-websites').textContent = results.filter(r => r.website).length;
+  $('count').textContent = results.length;
+}
+
+function addItem(item){
+  results.push(item);
+  $('tbody').appendChild(renderRow(item));
+  recomputeStats();
+  $('dl-xlsx').disabled = false;
+  $('dl-csv').disabled = false;
+  $('clear').disabled = false;
+  $('empty').style.display = 'none';
+  if (totalExpected > 0){
+    const pct = Math.min(100, (results.length / totalExpected) * 100);
+    $('progress-fill').style.width = pct + '%';
+    $('progress-text').textContent = `Extracted ${results.length} of ${totalExpected}…`;
+  }
+  applyFilter();
+}
+
+function startProgress(indet){
+  $('progress-section').style.display = 'block';
+  if (indet){
+    $('progress-fill').style.width = '';
+    $('progress-fill').classList.add('indeterminate');
+    $('progress-text').textContent = 'Loading listings from Google Maps…';
+  } else {
+    $('progress-fill').classList.remove('indeterminate');
+  }
+}
+
+function endProgress(label){
+  $('progress-fill').classList.remove('indeterminate');
+  $('progress-fill').style.width = '100%';
+  $('progress-text').textContent = label;
+}
+
+function applyFilter(){
+  const q = $('filter').value.trim().toLowerCase();
+  const rows = $('tbody').querySelectorAll('tr');
+  rows.forEach((tr, i) => {
+    if (!q){ tr.style.display = ''; return; }
+    const item = results[i];
+    const hay = FIELDS.map(f => item[f] || '').join(' ').toLowerCase();
+    tr.style.display = hay.includes(q) ? '' : 'none';
+  });
+}
+
+function finish(){
+  $('go').disabled = false;
+  $('go').innerHTML = '▶ Start scraping';
+  $('stop').disabled = true;
+  if (evt){ try { evt.close(); } catch(_){} evt = null; }
+}
+
+// ---------------- Form / scrape -------------------------------------------
+
+$('form').addEventListener('submit', function(e){
+  e.preventDefault();
+  log('Start button clicked.');
+  try {
+    results.length = 0;
+    $('tbody').innerHTML = '';
+    totalExpected = 0;
+    recomputeStats();
+    $('go').disabled = true;
+    $('go').innerHTML = '<span class="spinner"></span>Scraping…';
+    $('stop').disabled = false;
+    $('dl-xlsx').disabled = true;
+    $('dl-csv').disabled = true;
+    $('clear').disabled = true;
+    $('empty').style.display = 'none';
+    startProgress(true);
+
+    const q = encodeURIComponent($('query').value.trim());
+    const m = parseInt($('maxr').value, 10) || 60;
+    const wantEmails = $('opt-emails').checked ? 1 : 0;
+    const url = `/scrape?query=${q}&max_results=${m}&emails=${wantEmails}`;
+    log('Opening SSE: ' + url);
+    evt = new EventSource(url);
+
+    evt.onopen = () => log('Connected to server.');
+    evt.onmessage = ev => {
+      let d;
+      try { d = JSON.parse(ev.data); } catch(err){ log('Bad SSE payload: ' + ev.data); return; }
+      if (d.type === 'log') log(d.message);
+      else if (d.type === 'total'){
+        totalExpected = d.total;
+        $('progress-fill').classList.remove('indeterminate');
+        $('progress-fill').style.width = '0%';
+        $('progress-text').textContent = `Found ${d.total} listings — extracting…`;
+      }
+      else if (d.type === 'item') addItem(d.item);
+      else if (d.type === 'error'){ log('ERROR: ' + d.message); endProgress('Error'); finish(); }
+      else if (d.type === 'done'){ log('Finished.'); endProgress(`Done — ${results.length} listings`); finish(); }
+    };
+    evt.onerror = () => {
+      log('SSE connection lost (readyState=' + (evt ? evt.readyState : '?') + ').');
+      endProgress('Closed');
+      finish();
+    };
+  } catch (err){
+    log('FATAL in submit handler: ' + (err && err.message || err));
+    alert('Error: ' + (err && err.message || err));
+    finish();
+  }
+});
+
+$('stop').addEventListener('click', () => {
+  if (evt){ log('Stopped by user.'); endProgress('Stopped'); finish(); }
+});
+
+$('clear').addEventListener('click', () => {
+  results.length = 0;
+  $('tbody').innerHTML = '';
+  recomputeStats();
+  $('dl-xlsx').disabled = true;
+  $('dl-csv').disabled = true;
+  $('clear').disabled = true;
+  $('empty').style.display = 'block';
+  $('progress-section').style.display = 'none';
+});
+
+$('filter').addEventListener('input', applyFilter);
+
+$('diag').addEventListener('click', async () => {
+  log('Testing /health...');
+  try {
+    const r = await fetch('/health');
+    if (!r.ok){ log('Health check failed: HTTP ' + r.status); return; }
+    const d = await r.json();
+    log('Server OK — version ' + d.version + ', browser_ready=' + d.browser_ready);
+    if (!d.browser_ready) log('⚠ Playwright browser not initialised — restart start.bat.');
+  } catch (e){
+    log('Cannot reach server: ' + (e.message||e));
+    log('Make sure you opened the page from http://127.0.0.1:8000 (not file://).');
+  }
+});
+
+$('cols-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  $('cols-menu').hidden = !$('cols-menu').hidden;
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('.menu-wrap')) $('cols-menu').hidden = true;
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape'){ $('cols-menu').hidden = true; $('settings-modal').hidden = true; }
+});
+
+$('dl-xlsx').addEventListener('click', () => {
+  const ws = XLSX.utils.json_to_sheet(results, { header: FIELDS });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Results");
+  const stamp = new Date().toISOString().replace(/[-:T.Z]/g,'').slice(0,14);
+  XLSX.writeFile(wb, `gmaps_${stamp}.xlsx`);
+});
+
+$('dl-csv').addEventListener('click', () => {
+  const esc = v => {
+    v = (v ?? '').toString();
+    return /[",\n\r]/.test(v) ? `"${v.replace(/"/g,'""')}"` : v;
+  };
+  const lines = [FIELDS.join(',')];
+  for (const r of results) lines.push(FIELDS.map(f => esc(r[f])).join(','));
+  const blob = new Blob(['﻿' + lines.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const stamp = new Date().toISOString().replace(/[-:T.Z]/g,'').slice(0,14);
+  a.download = `gmaps_${stamp}.csv`;
+  a.click();
+});
+
+// ---------------- Settings & auto-update ----------------------------------
+
+$('settings-btn').addEventListener('click', async () => {
+  $('settings-modal').hidden = false;
+  try {
+    const r = await fetch('/update/config');
+    const d = await r.json();
+    $('cfg-repo').value = d.repo || '';
+    $('cfg-branch').value = d.branch || 'main';
+  } catch(_){}
+});
+
+$('cfg-close').addEventListener('click', () => $('settings-modal').hidden = true);
+$('settings-modal').addEventListener('click', e => {
+  if (e.target.id === 'settings-modal') $('settings-modal').hidden = true;
+});
+
+$('cfg-save').addEventListener('click', async () => {
+  $('cfg-status').textContent = 'Saving…';
+  try {
+    const r = await fetch('/update/config', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({repo: $('cfg-repo').value.trim(), branch: $('cfg-branch').value.trim() || 'main'})
+    });
+    const d = await r.json();
+    if (d.ok){
+      $('cfg-status').textContent = '✓ Saved.';
+      checkForUpdatesSilent();
+    } else {
+      $('cfg-status').textContent = '✗ ' + (d.error || 'Save failed');
+    }
+  } catch(e){
+    $('cfg-status').textContent = '✗ ' + e.message;
+  }
+});
+
+$('cfg-check').addEventListener('click', () => doUpdateCheck(true));
+
+$('cfg-apply').addEventListener('click', async () => {
+  if (!confirm('Download latest files from GitHub? After this, stop and re-run start.bat to load the new code. A backup of your current files will be made.')) return;
+  $('cfg-apply').disabled = true;
+  $('cfg-status').textContent = 'Downloading…';
+  try {
+    const r = await fetch('/update/apply', {method:'POST'});
+    const d = await r.json();
+    if (d.ok){
+      $('cfg-status').innerHTML = '✓ Updated ' + d.updated.length + ' file(s). Backup: <code>' + escHtml(d.backup.split(/[\\/]/).pop()) + '</code>. <b>Stop and re-run start.bat now.</b>';
+    } else {
+      $('cfg-status').textContent = '✗ ' + (d.error || 'Update failed');
+      $('cfg-apply').disabled = false;
+    }
+  } catch(e){
+    $('cfg-status').textContent = '✗ ' + e.message;
+    $('cfg-apply').disabled = false;
+  }
+});
+
+async function doUpdateCheck(showInModal){
+  $('cfg-status').textContent = 'Checking GitHub…';
+  $('cfg-notes').hidden = true;
+  try {
+    const r = await fetch('/update/check');
+    const d = await r.json();
+    latestUpdateInfo = d;
+    if (!d.enabled){
+      $('cfg-status').textContent = d.message || 'Not configured.';
+      $('cfg-apply').disabled = true;
+      return;
+    }
+    if (d.error){
+      $('cfg-status').textContent = '✗ ' + d.error;
+      $('cfg-apply').disabled = true;
+      return;
+    }
+    if (d.has_update){
+      $('cfg-status').innerHTML = `Update available: <b>${escHtml(d.latest)}</b> (current: ${escHtml(d.current)}).`;
+      if (d.release_notes){
+        $('cfg-notes').textContent = d.release_notes;
+        $('cfg-notes').hidden = false;
+      }
+      $('cfg-apply').disabled = false;
+      showUpdateBanner(d);
+    } else {
+      $('cfg-status').textContent = 'You are up to date (' + d.current + ').';
+      $('cfg-apply').disabled = true;
+    }
+  } catch(e){
+    $('cfg-status').textContent = '✗ ' + e.message;
+    $('cfg-apply').disabled = true;
+  }
+}
+
+function showUpdateBanner(d){
+  showBanner('update',
+    `<div>📦 Update available: <b>${escHtml(d.latest)}</b> &nbsp;<span style="opacity:.7">(current ${escHtml(d.current)})</span></div>
+     <div class="spacer"></div>
+     <button onclick="document.getElementById('settings-btn').click()">View details</button>
+     <button class="ghost" data-act="dismiss">Dismiss</button>`,
+    {dismissBtn: true}
+  );
+}
+
+async function checkForUpdatesSilent(){
+  try {
+    const r = await fetch('/update/check');
+    const d = await r.json();
+    latestUpdateInfo = d;
+    if (d.enabled && d.has_update) showUpdateBanner(d);
+  } catch(_){}
+}
+
+// ---------------- Page bootstrap ------------------------------------------
+
+async function bootstrap(){
+  renderHeader();
+  renderColMenu();
+  log('UI loaded. Pinging server…');
+  try {
+    const r = await fetch('/health');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    $('version-pill').textContent = 'v' + d.version;
+    log('Server OK — version ' + d.version + ', browser_ready=' + d.browser_ready);
+    if (!d.browser_ready){
+      showBanner('offline', '<div>⚠ Playwright browser failed to start. Stop start.bat and check the terminal for errors.</div><div class="spacer"></div><button data-act="dismiss">Dismiss</button>', {dismissBtn:true});
+    }
+    if (d.github_repo) checkForUpdatesSilent();
+  } catch(e){
+    log('Cannot reach server: ' + (e.message||e));
+    $('version-pill').textContent = 'offline';
+    showBanner('offline',
+      `<div>⚠ Can't reach the local server. Is <code>start.bat</code> running? Are you opening <code>http://127.0.0.1:8000</code> (not the file directly)?</div>
+       <div class="spacer"></div><button data-act="dismiss">Dismiss</button>`,
+      {dismissBtn:true});
+  }
+}
+bootstrap();
+</script>
+</body>
+</html>

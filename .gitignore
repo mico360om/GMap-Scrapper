@@ -1,0 +1,18 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Local app state / config (never publish)
+update.json
+.last_update_sha
+.backup-*/
+gmaps.db
+gmaps.db-*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
