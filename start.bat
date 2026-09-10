@@ -7,42 +7,52 @@ REM ---- override these at runtime; they are the built-in defaults.
 set GITHUB_REPO=mico360om/GMap-Scrapper
 set GITHUB_BRANCH=main
 
-where python >nul 2>nul
-if errorlevel 1 (
-  echo [ERROR] Python is not installed or not on PATH.
-  echo Install Python 3.10+ from https://www.python.org/downloads/ and tick "Add to PATH".
-  pause
-  exit /b 1
-)
+REM =====================================================================
+REM  IMPORTANT: this script never trusts a bare `python`/`pip` from PATH.
+REM  On many machines PATH resolves `python` to the Microsoft Store stub,
+REM  or to an unrelated Python 2 bundled with other software (e.g. BioTime),
+REM  whose broken pip then fails the install. We create the venv with the
+REM  `py -3` launcher and then call the venv's own python.exe by absolute
+REM  path for every step after that.
+REM =====================================================================
 
-REM Detect the Windows Store stub which opens the Store on `python` calls
-python -c "import sys" >nul 2>nul
-if errorlevel 1 (
-  echo [ERROR] `python` runs but does not work. You may have the Windows Store stub.
-  echo Install a real Python from https://www.python.org/downloads/ and tick "Add to PATH".
-  pause
-  exit /b 1
-)
+if exist ".venv\Scripts\python.exe" goto :have_venv
 
-if not exist .venv (
-  echo Creating virtual environment...
-  python -m venv .venv
-  if errorlevel 1 ( echo [ERROR] Failed to create venv. & pause & exit /b 1 )
-  set FIRST_RUN=1
-)
+echo Creating virtual environment...
+set "PYLAUNCH="
+py -3 -c "import sys" >nul 2>nul
+if not errorlevel 1 set "PYLAUNCH=py -3"
+if defined PYLAUNCH goto :make_venv
+python -c "import sys;raise SystemExit(0 if sys.version_info[0]>=3 else 1)" >nul 2>nul
+if not errorlevel 1 set "PYLAUNCH=python"
+if defined PYLAUNCH goto :make_venv
+echo [ERROR] Could not find Python 3. Install Python 3.10+ from
+echo         https://www.python.org/downloads/ and tick "Add to PATH".
+pause
+exit /b 1
 
-call .venv\Scripts\activate.bat
+:make_venv
+%PYLAUNCH% -m venv .venv
+if errorlevel 1 ( echo [ERROR] Failed to create venv. & pause & exit /b 1 )
+if not exist ".venv\Scripts\python.exe" ( echo [ERROR] venv creation produced no python.exe. & pause & exit /b 1 )
 
-echo Syncing Python packages (idempotent)...
-python -m pip install --upgrade pip >nul
-pip install -r requirements.txt
+:have_venv
+set "VENV_PY=%~dp0.venv\Scripts\python.exe"
+
+REM ---- Offline / bundled packages (optional): if you drop wheel files into
+REM ---- a "vendor\wheels" folder next to this script, pip installs from them
+REM ---- (pip reads PIP_FIND_LINKS automatically), so the tool can set up with
+REM ---- no internet. If the folder is absent, packages come from PyPI.
+if exist "%~dp0vendor\wheels" set "PIP_FIND_LINKS=%~dp0vendor\wheels"
+
+echo Installing / updating Python packages (idempotent - auto-heals anything missing)...
+"%VENV_PY%" -m pip install --upgrade pip
+"%VENV_PY%" -m pip install -r requirements.txt
 if errorlevel 1 ( echo [ERROR] pip install failed. & pause & exit /b 1 )
 
-if defined FIRST_RUN (
-  echo Installing Playwright Chromium ^(one-time, ~150MB^)...
-  python -m playwright install chromium
-  if errorlevel 1 ( echo [ERROR] playwright install failed. & pause & exit /b 1 )
-)
+echo Ensuring the browser engine is installed (idempotent)...
+"%VENV_PY%" -m playwright install chromium
+if errorlevel 1 ( echo [ERROR] Playwright browser install failed. & pause & exit /b 1 )
 
 echo.
 echo ================================================
@@ -58,4 +68,4 @@ REM subprocess (raises NotImplementedError at startup). The default (no reload)
 REM uses the ProactorEventLoop, which works. After editing files, just stop and
 REM re-run this script.
 start "" http://127.0.0.1:8000
-python -m uvicorn app:app --host 127.0.0.1 --port 8000
+"%VENV_PY%" -m uvicorn app:app --host 127.0.0.1 --port 8000
