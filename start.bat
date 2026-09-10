@@ -16,8 +16,16 @@ REM  `py -3` launcher and then call the venv's own python.exe by absolute
 REM  path for every step after that.
 REM =====================================================================
 
-if exist ".venv\Scripts\python.exe" goto :have_venv
+REM Reuse an existing venv only if it actually RUNS. Its base Python can be
+REM moved or removed (e.g. the Windows Python install manager updating a
+REM runtime), which leaves the venv's python.exe pointing at a missing target.
+if not exist ".venv\Scripts\python.exe" goto :setup_python
+".venv\Scripts\python.exe" -c "import sys" >nul 2>nul
+if not errorlevel 1 goto :have_venv
+echo Existing environment is broken (its Python went missing) - rebuilding...
+rmdir /s /q ".venv" >nul 2>nul
 
+:setup_python
 echo Preparing Python environment...
 set "PYLAUNCH="
 py -3 -c "import sys" >nul 2>nul
@@ -27,9 +35,11 @@ python -c "import sys;raise SystemExit(0 if sys.version_info[0]>=3 else 1)" >nul
 if not errorlevel 1 set "PYLAUNCH=python"
 if defined PYLAUNCH goto :make_venv
 
-REM ---- No system Python 3: fetch a private, self-contained copy (one-time) ----
-REM  A relocatable CPython build is downloaded into ".python" next to this
-REM  script and used only by this app. Nothing is installed system-wide.
+REM ---- No system Python 3, or it can't build a working venv: fetch a private
+REM ---- self-contained CPython into ".python" and use only that. Nothing is
+REM ---- installed system-wide.
+:bootstrap_python
+set "USED_BOOTSTRAP=1"
 set "PYDIR=%~dp0.python"
 set "PYEXE=%PYDIR%\python\python.exe"
 if exist "%PYEXE%" goto :make_venv_local
@@ -66,7 +76,16 @@ if errorlevel 1 ( echo [ERROR] Failed to create venv from the private Python. & 
 goto :check_venv
 
 :check_venv
-if not exist ".venv\Scripts\python.exe" ( echo [ERROR] venv creation produced no python.exe. & pause & exit /b 1 )
+if not exist ".venv\Scripts\python.exe" goto :venv_broken
+".venv\Scripts\python.exe" -c "import sys" >nul 2>&1
+if errorlevel 1 goto :venv_broken
+goto :have_venv
+
+:venv_broken
+if defined USED_BOOTSTRAP ( echo [ERROR] Could not build a working Python environment. Delete the .venv and .python folders, then run this again. & pause & exit /b 1 )
+echo That Python could not build a working environment - switching to a private Python...
+rmdir /s /q ".venv" >nul 2>nul
+goto :bootstrap_python
 
 :have_venv
 set "VENV_PY=%~dp0.venv\Scripts\python.exe"
