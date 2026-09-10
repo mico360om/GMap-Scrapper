@@ -18,7 +18,7 @@ REM =====================================================================
 
 if exist ".venv\Scripts\python.exe" goto :have_venv
 
-echo Creating virtual environment...
+echo Preparing Python environment...
 set "PYLAUNCH="
 py -3 -c "import sys" >nul 2>nul
 if not errorlevel 1 set "PYLAUNCH=py -3"
@@ -26,14 +26,46 @@ if defined PYLAUNCH goto :make_venv
 python -c "import sys;raise SystemExit(0 if sys.version_info[0]>=3 else 1)" >nul 2>nul
 if not errorlevel 1 set "PYLAUNCH=python"
 if defined PYLAUNCH goto :make_venv
-echo [ERROR] Could not find Python 3. Install Python 3.10+ from
-echo         https://www.python.org/downloads/ and tick "Add to PATH".
-pause
-exit /b 1
+
+REM ---- No system Python 3: fetch a private, self-contained copy (one-time) ----
+REM  A relocatable CPython build is downloaded into ".python" next to this
+REM  script and used only by this app. Nothing is installed system-wide.
+set "PYDIR=%~dp0.python"
+set "PYEXE=%PYDIR%\python\python.exe"
+if exist "%PYEXE%" goto :make_venv_local
+where tar >nul 2>nul
+if errorlevel 1 (
+  echo [ERROR] No Python 3 found and Windows 'tar' is unavailable.
+  echo         Install Python 3.10+ from https://www.python.org/downloads/
+  echo         ^(tick "Add to PATH"^) and run this again.
+  pause & exit /b 1
+)
+echo No Python found on this PC - downloading a private copy ^(one-time, ~44 MB^)...
+set "PY_URL=https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.12.14%%2B20260901-x86_64-pc-windows-msvc-install_only.tar.gz"
+set "PY_TGZ=%TEMP%\gmaps-python.tar.gz"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri $env:PY_URL -OutFile $env:PY_TGZ } catch { Write-Host $_; exit 1 }"
+if errorlevel 1 ( echo [ERROR] Could not download Python. Check your internet connection. & pause & exit /b 1 )
+if not exist "%PYDIR%" mkdir "%PYDIR%"
+echo Extracting Python...
+tar -xf "%PY_TGZ%" -C "%PYDIR%"
+if errorlevel 1 ( echo [ERROR] Could not extract Python. & pause & exit /b 1 )
+del "%PY_TGZ%" >nul 2>nul
+if not exist "%PYEXE%" ( echo [ERROR] Local Python missing after extract. & pause & exit /b 1 )
+goto :make_venv_local
 
 :make_venv
+echo Creating virtual environment...
 %PYLAUNCH% -m venv .venv
 if errorlevel 1 ( echo [ERROR] Failed to create venv. & pause & exit /b 1 )
+goto :check_venv
+
+:make_venv_local
+echo Creating virtual environment (using the private Python)...
+"%PYEXE%" -m venv .venv
+if errorlevel 1 ( echo [ERROR] Failed to create venv from the private Python. & pause & exit /b 1 )
+goto :check_venv
+
+:check_venv
 if not exist ".venv\Scripts\python.exe" ( echo [ERROR] venv creation produced no python.exe. & pause & exit /b 1 )
 
 :have_venv

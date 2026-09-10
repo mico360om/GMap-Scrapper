@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, FileResponse
 from playwright.async_api import async_playwright, Browser, Page
 
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 
 warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 warnings.filterwarnings("ignore", category=Warning, module="httpx")
