@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, FileResponse
 from playwright.async_api import async_playwright, Browser, Page
 
-VERSION = "1.2.3"
+VERSION = "1.2.4"
 
 warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 warnings.filterwarnings("ignore", category=Warning, module="httpx")
@@ -190,9 +190,14 @@ def find_emails_in_text(text: str) -> set[str]:
     deob = re.sub(r"\s*[\(\[]\s*dot\s*[\)\]]\s*", ".", deob, flags=re.I)
     found: set[str] = set()
     candidates = set(EMAIL_RE.findall(deob))
-    candidates |= set(EMAIL_RE.findall(" ".join(MAILTO_RE.findall(deob))))
+    # mailto: values are often percent-encoded (e.g. "mailto:%20info@x.com");
+    # decode them so "%20info@x.com" doesn't survive as a bogus address.
+    mailtos = " ".join(urllib.parse.unquote(m) for m in MAILTO_RE.findall(deob))
+    candidates |= set(EMAIL_RE.findall(mailtos))
     for raw in candidates:
         e = raw.lower().strip(".,;:")
+        if "%" in e:  # leftover percent-encoding is never a real local part
+            continue
         if any(b in e for b in EMAIL_BAD_SUBSTR):
             continue
         if e.endswith(EMAIL_BAD_SUFFIX):
@@ -264,6 +269,29 @@ FIELDS = [
 ]
 
 
+def status_from_hours(hours: str) -> str:
+    """Derive open/closed status from the hours summary line.
+
+    Order matters: "Opens 9 AM"/"Opens soon" means currently CLOSED and must be
+    checked before the "open" prefix (which it also matches); and "closes soon"
+    means currently OPEN.
+    """
+    low = (hours or "").lower()
+    if "permanently closed" in low:
+        return "Permanently closed"
+    if "temporarily closed" in low:
+        return "Temporarily closed"
+    if "open 24" in low:
+        return "Open 24 hours"
+    if low.startswith("closed"):
+        return "Closed"
+    if low.startswith("opens "):
+        return "Closed"
+    if low.startswith("open") or "closes soon" in low or low.startswith("closes "):
+        return "Open"
+    return ""
+
+
 async def extract_detail(page: Page, fallback_name: str = "") -> dict:
     item = {f: "" for f in FIELDS}
     item["place_url"] = page.url
@@ -314,7 +342,13 @@ async def extract_detail(page: Page, fallback_name: str = "") -> dict:
 
     item["plus_code"] = await safe_text(page, 'button[data-item-id="oloc"] div.Io6YTe')
 
-    hours_short = await safe_text(page, 'button[data-item-id="oh"]')
+    # Google's current markup exposes the "Open · Closes 11 PM" summary on an
+    # element whose jsaction references the open-hours dropdown; the older
+    # button[data-item-id="oh"] no longer exists. Keep both as fallbacks.
+    hours_short = (
+        await safe_text(page, '[jsaction*="openhours"]')
+        or await safe_text(page, 'button[data-item-id="oh"]')
+    )
     hours_long = await safe_text(page, 'div[aria-label*="Hours"]')
     hours_text = hours_short or hours_long or ""
     # Google wraps the hours text with Material Icons glyphs (Private Use Area
@@ -323,25 +357,13 @@ async def extract_detail(page: Page, fallback_name: str = "") -> dict:
     # then drop the suffix.
     hours_text = re.sub(r"[-]", "", hours_text)
     hours_text = re.sub(r"\s+", " ", hours_text)
-    hours_text = re.sub(r"\s*see more hours.*$", "", hours_text, flags=re.I | re.DOTALL)
+    hours_text = re.sub(
+        r"\s*(see more hours|suggest new hours|updated by this business|hours might differ).*$",
+        "", hours_text, flags=re.I | re.DOTALL,
+    )
     item["hours"] = hours_text.strip(" ·•-")
 
-    # Status: derive from the hours summary. Order matters because the word
-    # "closes" appears in BOTH "Closed · Opens 9 AM" (currently closed) and
-    # "Open · Closes 11 PM" / "Closes soon · 11 PM" (currently open).
-    low = item["hours"].lower()
-    if "permanently closed" in low:
-        item["status"] = "Permanently closed"
-    elif "temporarily closed" in low:
-        item["status"] = "Temporarily closed"
-    elif "open 24" in low:
-        item["status"] = "Open 24 hours"
-    elif low.startswith("closed"):
-        item["status"] = "Closed"
-    elif low.startswith("open") or "closes soon" in low or low.startswith("closes "):
-        item["status"] = "Open"
-    elif low.startswith("opens "):
-        item["status"] = "Closed"
+    item["status"] = status_from_hours(item["hours"])
 
     item["price"] = await safe_text(page, 'span[aria-label*="Price"]')
     item["description"] = await safe_text(page, "div.PYvSYb")
